@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Upload, FileText, Loader2, Download, Merge, Minimize2, X, CheckCircle } from 'lucide-react';
 import './App.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE = "https://andpdf-backend.onrender.com";
 
 function App() {
   const [activeTab, setActiveTab] = useState('merge');
