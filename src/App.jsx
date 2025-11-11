@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { Upload, FileText, Loader2, Download, Merge, Minimize2, X, CheckCircle } from 'lucide-react';
 import './App.css';
 
-const API_BASE = "https://andpdf-backend.onrender.com";
+// ✅ Use explicit fallback for production base URL
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL ||
+  window._env_?.REACT_APP_API_URL || // optional for runtime env injection
+  'https://andpdf-backend.onrender.com'; // change this to your backend Render URL
 
 function App() {
   const [activeTab, setActiveTab] = useState('merge');
@@ -23,7 +27,7 @@ function App() {
         setError(`File "${file.name}" is not a PDF`);
         return false;
       }
-      if (file.size > 50 * 1024 * 1024) { // 50MB limit
+      if (file.size > 50 * 1024 * 1024) {
         setError(`File "${file.name}" is too large (max 50MB)`);
         return false;
       }
@@ -31,7 +35,7 @@ function App() {
     });
 
     if (validFiles.length > 0) {
-      setFiles(prevFiles => [...prevFiles, ...validFiles]);
+      setFiles(prev => [...prev, ...validFiles]);
       setResult(null);
       setError(null);
     }
@@ -43,15 +47,11 @@ function App() {
     validateAndAddFiles(droppedFiles);
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
+  const handleDragOver = (e) => e.preventDefault();
 
   const removeFile = (index) => {
     setFiles(files.filter((_, i) => i !== index));
-    if (files.length === 1) {
-      setResult(null);
-    }
+    if (files.length === 1) setResult(null);
   };
 
   const clearAll = () => {
@@ -68,7 +68,7 @@ function App() {
 
     setLoading(true);
     setError(null);
-    
+
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
 
@@ -85,10 +85,10 @@ function App() {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const filename = response.headers.get('content-disposition')
-        ?.split('filename=')[1]
-        ?.replace(/"/g, '') || 'merged.pdf';
-      
+      const filename =
+        response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') ||
+        'merged.pdf';
+
       setResult({ url, filename, type: 'merge' });
     } catch (error) {
       setError('Error merging PDFs: ' + error.message);
@@ -106,7 +106,7 @@ function App() {
 
     setLoading(true);
     setError(null);
-    
+
     const formData = new FormData();
     formData.append('file', files[0]);
 
@@ -127,15 +127,15 @@ function App() {
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const filename = response.headers.get('content-disposition')
-        ?.split('filename=')[1]
-        ?.replace(/"/g, '') || 'compressed.pdf';
-      
-      setResult({ 
-        url, 
-        filename, 
+      const filename =
+        response.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g, '') ||
+        'compressed.pdf';
+
+      setResult({
+        url,
+        filename,
         type: 'compress',
-        stats: { originalSize, compressedSize, reduction }
+        stats: { originalSize, compressedSize, reduction },
       });
     } catch (error) {
       setError('Error compressing PDF: ' + error.message);
@@ -146,11 +146,7 @@ function App() {
   };
 
   const handleProcess = () => {
-    if (activeTab === 'merge') {
-      mergePDFs();
-    } else {
-      compressPDF();
-    }
+    activeTab === 'merge' ? mergePDFs() : compressPDF();
   };
 
   const downloadFile = () => {
@@ -179,7 +175,6 @@ function App() {
     <div className="app-container">
       <div className="content-wrapper">
         <div className="card">
-          {/* Header */}
           <div className="header">
             <div className="header-content">
               <FileText size={40} />
@@ -208,19 +203,16 @@ function App() {
             </button>
           </div>
 
-          {/* Content */}
           <div className="content">
-            {/* Tab Description */}
-            {activeTab === 'merge' && (
+            {/* Tab-specific description */}
+            {activeTab === 'merge' ? (
               <div className="description">
                 <h3 className="description-title">Merge Multiple PDFs</h3>
                 <p className="description-text">
                   Upload 2 or more PDF files to combine them into a single document
                 </p>
               </div>
-            )}
-
-            {activeTab === 'compress' && (
+            ) : (
               <div className="description">
                 <h3 className="description-title">Compress PDF File</h3>
                 <p className="description-text">
@@ -246,7 +238,7 @@ function App() {
               </div>
             )}
 
-            {/* Error Message */}
+            {/* Error message */}
             {error && (
               <div className="error-message">
                 <X size={20} />
@@ -257,12 +249,8 @@ function App() {
               </div>
             )}
 
-            {/* Upload Area */}
-            <div
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              className="upload-area"
-            >
+            {/* Upload */}
+            <div onDrop={handleDrop} onDragOver={handleDragOver} className="upload-area">
               <input
                 type="file"
                 accept="application/pdf"
@@ -273,16 +261,16 @@ function App() {
               />
               <label htmlFor="file-upload" className="upload-label">
                 <Upload size={48} />
-                <p className="upload-title">
-                  Drop PDF files here or click to browse
-                </p>
+                <p className="upload-title">Drop PDF files here or click to browse</p>
                 <p className="upload-subtitle">
-                  {activeTab === 'merge' ? 'Select multiple PDF files' : 'Select one PDF file'}
+                  {activeTab === 'merge'
+                    ? 'Select multiple PDF files'
+                    : 'Select one PDF file'}
                 </p>
               </label>
             </div>
 
-            {/* File List */}
+            {/* Files */}
             {files.length > 0 && (
               <div className="file-list">
                 <div className="file-list-header">
@@ -299,10 +287,7 @@ function App() {
                         <span className="file-name">{file.name}</span>
                         <span className="file-size">({formatBytes(file.size)})</span>
                       </div>
-                      <button
-                        onClick={() => removeFile(index)}
-                        className="remove-button"
-                      >
+                      <button onClick={() => removeFile(index)} className="remove-button">
                         Remove
                       </button>
                     </div>
@@ -311,7 +296,7 @@ function App() {
               </div>
             )}
 
-            {/* Action Button */}
+            {/* Action button */}
             {files.length > 0 && !result && (
               <button
                 onClick={handleProcess}
@@ -339,13 +324,23 @@ function App() {
                     <CheckCircle size={24} className="result-icon" />
                     <div>
                       <h4 className="result-title">
-                        {result.type === 'merge' ? 'PDFs Merged Successfully!' : 'PDF Compressed Successfully!'}
+                        {result.type === 'merge'
+                          ? 'PDFs Merged Successfully!'
+                          : 'PDF Compressed Successfully!'}
                       </h4>
                       {result.stats && (
                         <div className="result-stats">
-                          <p>Original Size: <strong>{formatBytes(result.stats.originalSize)}</strong></p>
-                          <p>Compressed Size: <strong>{formatBytes(result.stats.compressedSize)}</strong></p>
-                          <p className="reduction">Reduced by: <strong>{result.stats.reduction}%</strong></p>
+                          <p>
+                            Original Size:{' '}
+                            <strong>{formatBytes(result.stats.originalSize)}</strong>
+                          </p>
+                          <p>
+                            Compressed Size:{' '}
+                            <strong>{formatBytes(result.stats.compressedSize)}</strong>
+                          </p>
+                          <p className="reduction">
+                            Reduced by: <strong>{result.stats.reduction}%</strong>
+                          </p>
                         </div>
                       )}
                     </div>
@@ -360,9 +355,10 @@ function App() {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="footer">
-          <p>More tools coming soon! Stay tuned for split, rotate, and watermark features.</p>
+          <p>
+            More tools coming soon! Stay tuned for split, rotate, and watermark features.
+          </p>
         </div>
       </div>
     </div>
